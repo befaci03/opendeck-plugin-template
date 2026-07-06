@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="256mm"
+   height="256mm"
+   viewBox="0 0 256 256"
+   version="1.1"
+   id="svg1"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1" />
+  <g
+     id="layer1">
+    <text
+       xml:space="preserve"
+       style="font-size:58.2605px;writing-mode:lr-tb;direction:ltr;fill:#ff1515;fill-opacity:1;stroke-width:0.30344"
+       x="43.485989"
+       y="58.174988"
+       id="text15"
+       transform="scale(1.0418518,0.95982941)"><tspan
+         id="tspan15"
+         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:semi-condensed;font-size:58.2605px;font-family:'Noto Sans';-inkscape-font-specification:'Noto Sans Italic Semi-Condensed';fill:#ff1515;fill-opacity:1;stroke-width:0.30344"
+         x="43.485989"
+         y="58.174988">Count!</tspan></text>
+    <rect
+       style="fill:#ffcf1d;fill-opacity:1;stroke:#ffa417;stroke-width:7.79194;stroke-dasharray:none;stroke-opacity:1"
+       id="rect15"
+       width="167.8313"
+       height="128.47926"
+       x="43.334702"
+       y="76.502029"
+       ry="27.114134" />
+  </g>
+</svg>

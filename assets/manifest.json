@@ -1,0 +1,40 @@
+{
+    "Name": "My Awesome Plugin",
+    "Description": "Some cool stuff like a counter :D",
+    "Author": "me",
+    "Version": "0.1.0",
+    "Category": "THE plugin",
+    "Icon": "icon",
+    "CategoryIcon": "icon",
+    "OS": [
+        { "Platform": "windows" },
+        { "Platform": "mac" },
+        { "Platform": "linux" }
+    ],
+    "CodePaths": {
+        "x86_64-pc-windows-msvc": "plugin-opendeck-x86_64-pc-windows-msvc.exe",
+        "x86_64-apple-darwin": "plugin-opendeck-x86_64-apple-darwin",
+        "aarch64-apple-darwin": "plugin-opendeck-aarch64-apple-darwin",
+        "x86_64-unknown-linux-gnu": "plugin-opendeck-x86_64-unknown-linux-gnu",
+        "aarch64-unknown-linux-gnu": "plugin-opendeck-aarch64-unknown-linux-gnu"
+    },
+    "CodePathWin": "plugin-opendeck-x86_64-pc-windows-msvc.exe",
+    "CodePathMac": "plugin-opendeck-x86_64-apple-darwin",
+    "CodePathLin": "plugin-opendeck-x86_64-unknown-linux-gnu",
+    "PropertyInspectorPath": "html/config.sample.html",
+    "Actions": [
+        {
+            "UUID": "com.example.opendeck.my-awesome-plugin.counter",
+            "Name": "Simple Counter",
+            "Icon": "imgs/actions/counter",
+            "Tooltip": "Press it to increment it!",
+            "PropertyInspectorPath": "html/counter.action.html",
+            "Controllers": [
+                "Keypad"
+            ],
+            "States": [
+                { "Image": "icon" }
+            ]
+        }
+    ]
+}

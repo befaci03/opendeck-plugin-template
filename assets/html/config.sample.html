@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Chat Message</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #1a1a2e; color: #fff; font-family: Arial, sans-serif; padding: 15px; color-scheme: dark; }
+        .container { max-width: 400px; }
+        .status-box { margin-bottom: 15px; padding: 10px 12px; background: #16213e; border-radius: 4px; font-size: 14px; }
+        .status-label { color: #afafaf; font-size: 12px; margin-bottom: 4px; }
+        .status-value { color: #fff; font-weight: bold; }
+        .form-group { margin-bottom: 14px; }
+        label { display: block; color: #afafaf; font-size: 12px; margin-bottom: 5px; }
+        input[type="text"], input[type="password"], textarea {
+            width: 100%; padding: 8px; background: #16213e; border: 1px solid #333;
+            color: #e2e8f0; border-radius: 4px; font-size: 13px;
+        }
+        .image-preview { width: 48px; height: 48px; object-fit: cover; border-radius: 4px; margin-top: 6px; display: none; border: 1px solid #333; }
+        input[type="file"] { display: none; }
+        textarea { resize: vertical; min-height: 70px; font-family: monospace; }
+        input:focus, input[type="password"]:focus, textarea:focus { outline: none; border-color: #9147ff; }
+        .hint { font-size: 11px; color: #888; margin-top: 4px; }
+        button {
+            background: #9147ff; color: white; border: none; padding: 9px 14px;
+            border-radius: 4px; cursor: pointer; font-size: 13px; margin-top: 8px; width: 100%;
+        }
+        button:hover { background: #7a3dbf; }
+        .hidden { display: none; }
+        .auth-box {
+            padding: 10px; background: #0f3a1a; border-left: 3px solid #4ade80;
+            border-radius: 4px; font-size: 13px; margin-bottom: 10px;
+        }
+        .auth-box a { color: #4ade80; }
+        .auth-code { font-size: 18px; font-weight: bold; letter-spacing: 2px; color: #4ade80; margin-top: 6px; }
+        .error-box {
+            padding: 10px; background: #3a0f0f; border-left: 3px solid #ef4444;
+            border-radius: 4px; font-size: 13px; margin-top: 10px;
+        }
+        .divider { border-top: 1px solid #2a2a4e; margin: 12px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="status-box">
+            <div class="status-label">Twitch Status</div>
+            <div id="auth-status" class="status-value">Checking...</div>
+        </div>
+
+        <div id="login-section" class="hidden">
+            <div class="form-group">
+                <label>Twitch App Client ID:</label>
+                <input type="text" id="client-id" placeholder="Paste your Client ID here">
+                <div class="hint">Register an app at <strong>dev.twitch.tv</strong> &rarr; OAuth Redirect: <em>http://localhost</em></div>
+            </div>
+            <div class="form-group">
+                <label>Twitch App Client Secret:</label>
+                <input type="password" id="client-secret" placeholder="Paste your Client Secret here">
+            </div>
+            <button onclick="startAuth()">Login with Twitch</button>
+        </div>
+
+        <div id="auth-progress" class="hidden">
+            <div class="auth-box">
+                <div>1. Visit: <span id="auth-url" onclick="openAuthUrl()" style="color:#4ade80;cursor:pointer;text-decoration:underline">twitch.tv/activate</span></div>
+                <div>2. Enter code:</div>
+                <div class="auth-code" id="auth-code">------</div>
+                <div style="margin-top:8px;color:#afafaf;font-size:11px">Waiting for authorization...</div>
+            </div>
+        </div>
+
+        <div id="action-section" class="hidden">
+            <button onclick="disconnect()" style="background:#3a1f00;border:1px solid #f59e0b;color:#f59e0b;margin-bottom:10px;">Disconnect / Re-authenticate</button>
+            <div class="divider"></div>
+            <div class="form-group">
+                <label>Message to send to chat:</label>
+                <textarea id="message" placeholder="Type your chat message..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Button Label Line 1 (max 10 chars):</label>
+                <input type="text" id="label-line1" maxlength="10" placeholder="Line 1">
+            </div>
+            <div class="form-group">
+                <label>Button Label Line 2 (max 10 chars):</label>
+                <input type="text" id="label-line2" maxlength="10" placeholder="Line 2 (optional)">
+            </div>
+            <div class="form-group">
+                <label>Button Image:</label>
+                <button type="button" onclick="document.getElementById('image-file').click()">Choose Image</button>
+                <input type="file" id="image-file" accept="image/*" onchange="handleImageFile(this)">
+                <img id="image-preview" class="image-preview" alt="preview">
+                <button type="button" id="clear-image-btn" style="display:none;margin-top:4px;background:#3a0f0f;" onclick="clearImage()">Clear Image</button>
+            </div>
+            <button onclick="saveSettings()">Save</button>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * @type {SDSocket}
+         */
+        var socket = null;
+        var uuid = null;
+
+        class SDSocket {
+            port;
+            piUUID;
+            regEv;
+            info;
+            actionInfo;
+
+            /**
+             * @type {WebSocket}
+             */
+            ws;
+            constructor(inPort, inPIUUID, inRE, inInfo, inActionInfo) {
+                this.port = inPort;
+                this.piUUID = inPIUUID;
+                this.regEv = inRE;
+                this.info = inInfo;
+                this.actionInfo = inActionInfo;
+            }
+
+            zinit() {
+                const websock = new WebSocket(`ws://localhost:${this.port}`);
+                websock.onopen = function() {
+                    websock.send({ event: this.regEv, uuid: this.piUUID });
+                    websock.send({ event: 'getSettings', uuid: this.piUUID });
+                }
+                websock.onmessage = function(ev) {
+                    const data = JSON.parse(ev.data);
+                    if (data.event === 'didReceiveSettings') {
+                        
+                    }
+                }
+                this.ws = websock
+            }
+        }
+        function openAuthUrl() {
+            if (authUrl && websocket && websocket.readyState === WebSocket.OPEN) {
+                websocket.send(JSON.stringify({ event: 'openUrl', payload: { url: authUrl } }));
+            }
+        }
+
+        // Called by the host (OpenDeck/Stream Deck) after the page loads
+        function connectElgatoStreamDeckSocket(inPort, inPropertyInspectorUUID, inRegisterEvent, inInfo, inActionInfo) {
+            socket = new SDSocket(inPort, inPropertyInspectorUUID, inRegisterEvent, inInfo, inActionInfo);
+
+            websocket.onopen = function() {
+                websocket.send(JSON.stringify({ event: inRegisterEvent, uuid: inPropertyInspectorUUID }));
+                websocket.send(JSON.stringify({ event: 'getSettings', context: inPropertyInspectorUUID }));
+                sendToPlugin({ event: 'get_auth_status' });
+            };
+
+            websocket.onmessage = function(evt) {
+                var data = JSON.parse(evt.data);
+                if (data.event === 'didReceiveSettings') {
+                    onSettingsReceived(data.payload.settings);
+                } else if (data.event === 'sendToPropertyInspector') {
+                    handlePluginMessage(data.payload);
+                }
+            };
+        }
+
+        function sendToPlugin(payload) {
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                websocket.send(JSON.stringify({ event: 'sendToPlugin', context: uuid, payload: payload }));
+            }
+        }
+
+        function setSettings(settings) {
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                websocket.send(JSON.stringify({ event: 'setSettings', context: uuid, payload: settings }));
+            }
+        }
+
+        function getLabel() {
+            var line1 = (document.getElementById('label-line1').value || '').slice(0, 10);
+            var line2 = (document.getElementById('label-line2').value || '').slice(0, 10);
+            return line2 ? line1 + '\n' + line2 : line1;
+        }
+
+        function onSettingsReceived(settings) {
+            if (settings && settings.message) {
+                document.getElementById('message').value = settings.message;
+            }
+            if (settings && settings.button_label) {
+                var parts = settings.button_label.split('\n');
+                document.getElementById('label-line1').value = parts[0] || '';
+                document.getElementById('label-line2').value = parts[1] || '';
+            }
+            if (settings && settings.button_image) {
+                showImagePreview(settings.button_image);
+            }
+        }
+
+        function saveSettings() {
+            var label = getLabel();
+            setSettings({ message: document.getElementById('message').value, button_label: label || null });
+            sendToPlugin({ event: 'set_title', title: label });
+            var btns = document.querySelectorAll('#action-section button:not(#clear-image-btn)');
+            var btn = btns[btns.length - 1];
+            var orig = btn.textContent;
+            btn.textContent = 'Saved!';
+            btn.style.background = '#22c55e';
+            setTimeout(function() {
+                btn.textContent = orig;
+                btn.style.background = '';
+            }, 1500);
+        }
+
+        function handleImageFile(input) {
+            var file = input.files[0];
+            if (!file) return;
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                var dataUrl = e.target.result;
+                showImagePreview(dataUrl);
+                setSettings({ message: document.getElementById('message').value, button_label: getLabel() || null, button_image: dataUrl });
+                sendToPlugin({ event: 'set_image', image_data: dataUrl });
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function showImagePreview(dataUrl) {
+            var img = document.getElementById('image-preview');
+            img.src = dataUrl;
+            img.style.display = 'block';
+            document.getElementById('clear-image-btn').style.display = 'block';
+        }
+
+        function clearImage() {
+            document.getElementById('image-preview').style.display = 'none';
+            document.getElementById('image-preview').src = '';
+            document.getElementById('clear-image-btn').style.display = 'none';
+            document.getElementById('image-file').value = '';
+            setSettings({ message: document.getElementById('message').value, button_label: getLabel() || null, button_image: null });
+            sendToPlugin({ event: 'set_image', image_data: '' });
+        }
+    </script>
+</body>
+</html>
